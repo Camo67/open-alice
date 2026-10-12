@@ -167,7 +167,7 @@ def create_webhook_app(receiver: SignalReceiver, host: str = "0.0.0.0", port: in
 
         app = Flask(__name__)
 
-        @app.route("/webhook", methods=["POST"])
+        @app.route("/webhook", methods=["POST"])  # type: ignore[untyped-decorator]
         def webhook() -> Any:
             if not request.is_json:
                 return jsonify({"error": "Expected JSON"}), 400
@@ -181,7 +181,7 @@ def create_webhook_app(receiver: SignalReceiver, host: str = "0.0.0.0", port: in
             logger.info("Received signal: %s", signal)
             return jsonify({"status": "received", "signal": signal.__dict__}), 200
 
-        @app.route("/health", methods=["GET"])
+        @app.route("/health", methods=["GET"])  # type: ignore[untyped-decorator]
         def health() -> Any:
             return jsonify({"status": "healthy"}), 200
 
