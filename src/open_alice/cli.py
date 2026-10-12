@@ -269,10 +269,9 @@ def _broker_login(args: argparse.Namespace) -> None:
 
     raw_server = getattr(args, "server", None)
     demo = bool(getattr(args, "demo", False))
-    if raw_server is None:
-        if not demo:
-            entered = input("  MT5 server [Headway-Demo / Headway-Real]: ").strip()
-            raw_server = entered or None
+    if raw_server is None and not demo:
+        entered = input("  MT5 server [Headway-Demo / Headway-Real]: ").strip()
+        raw_server = entered or None
     server = resolve_headway_server(raw_server, demo=demo)
 
     password = getpass.getpass(f"  MT5 password for {raw_login} on {server}: ")

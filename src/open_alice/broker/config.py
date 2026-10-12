@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 from pathlib import Path
 
@@ -33,10 +34,8 @@ def save_credentials(login: int, password: str, server: str) -> Path:
     # Minimal .env format without extra dependencies.
     content = f'MT5_LOGIN={login}\nMT5_PASSWORD={password}\nMT5_SERVER={server}\n'
     path.write_text(content, encoding="utf-8")
-    try:
+    with contextlib.suppress(OSError):
         os.chmod(path, 0o600)
-    except OSError:
-        pass
     return path
 
 

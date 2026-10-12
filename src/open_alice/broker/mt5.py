@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 import pandas as pd
 
@@ -12,7 +12,9 @@ import pandas as pd
 def _load_mt5() -> Any:
     """Import the MetaTrader5 package lazily with a helpful error."""
     try:
-        import MetaTrader5 as mt5  # type: ignore[import-untyped]
+        from importlib import import_module
+
+        return import_module("MetaTrader5")
     except ImportError as exc:
         raise RuntimeError(
             "The MetaTrader5 package is not installed or not supported on this "
@@ -21,7 +23,6 @@ def _load_mt5() -> Any:
             "'pip install MetaTrader5'. Original error: "
             f"{exc}"
         ) from exc
-    return mt5
 
 
 @dataclass
@@ -62,11 +63,11 @@ class MT5Broker:
 
     def __init__(
         self,
-        login: Optional[int] = None,
-        password: Optional[str] = None,
-        server: Optional[str] = None,
+        login: int | None = None,
+        password: str | None = None,
+        server: str | None = None,
         timeout: int = 60000,
-        terminal_path: Optional[str] = None,
+        terminal_path: str | None = None,
     ) -> None:
         """Initialize MT5 broker connection.
 
@@ -201,7 +202,7 @@ class MT5Broker:
         mask = (df.index >= start_date) & (df.index <= end_date)
         return df.loc[mask]
 
-    def get_positions(self, symbol: Optional[str] = None) -> list[MT5Position]:
+    def get_positions(self, symbol: str | None = None) -> list[MT5Position]:
         """Return open positions, optionally filtered by symbol."""
         mt5 = self._require_connected()
         positions = mt5.positions_get(symbol=symbol) if symbol else mt5.positions_get()

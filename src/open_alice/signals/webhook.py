@@ -2,18 +2,18 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional, Dict, Any
 from enum import Enum
-
-import logging
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
 class SignalType(Enum):
     """Types of trading signals."""
+
     BUY = "buy"
     SELL = "sell"
     CLOSE = "close"
@@ -22,46 +22,67 @@ class SignalType(Enum):
 @dataclass
 class TradingSignal:
     """Represents a trading signal received from external source."""
+
     symbol: str
     signal_type: SignalType
-    price: Optional[float] = None
-    timestamp: Optional[datetime] = None
-    strength: Optional[float] = None  # Signal strength 0-1
-    stop_loss: Optional[float] = None
-    take_profit: Optional[float] = None
-    comment: Optional[str] = None
-    raw_data: Optional[Dict[str, Any]] = None
+    price: float | None = None
+    timestamp: datetime | None = None
+    strength: float | None = None  # Signal strength 0-1
+    stop_loss: float | None = None
+    take_profit: float | None = None
+    comment: str | None = None
+    raw_data: dict[str, Any] | None = None
 
 
 class SignalReceiver:
     """Base class for signal receivers."""
-    
-    def parse_signal(self, raw_data: Dict[str, Any]) -> Optional[TradingSignal]:
+
+    def parse_signal(self, raw_data: dict[str, Any]) -> TradingSignal | None:
         """Parse raw data into a TradingSignal.
-        
+
         Args:
-            raw_data: Raw data received from external source
-            
+            raw_data: Raw data received from external source.
+
         Returns:
-            TradingSignal or None if parsing failed
+            TradingSignal or None if parsing failed.
         """
         raise NotImplementedError
 
 
+def _opt_float(raw_data: dict[str, Any], key: str) -> float | None:
+    """Return float(raw_data[key]) or None when the key is missing/null."""
+    value = raw_data.get(key)
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        logger.warning("Could not parse numeric field %s: %r", key, value)
+        return None
+
+
+def _opt_str(raw_data: dict[str, Any], key: str) -> str | None:
+    """Return str(raw_data[key]) or None when the key is missing/null."""
+    value = raw_data.get(key)
+    if value is None:
+        return None
+    return str(value)
+
+
 class TradingViewSignalReceiver(SignalReceiver):
     """Receiver for TradingView webhook alerts."""
-    
-    def __init__(self, secret: Optional[str] = None):
+
+    def __init__(self, secret: str | None = None) -> None:
         """Initialize TradingView signal receiver.
-        
+
         Args:
-            secret: Optional secret for validating requests
+            secret: Optional secret for validating requests.
         """
         self.secret = secret
-    
-    def parse_signal(self, raw_data: Dict[str, Any]) -> Optional[TradingSignal]:
+
+    def parse_signal(self, raw_data: dict[str, Any]) -> TradingSignal | None:
         """Parse TradingView webhook alert into TradingSignal.
-        
+
         Expected TradingView alert format:
         {
             "symbol": "AAPL",
@@ -73,22 +94,22 @@ class TradingViewSignalReceiver(SignalReceiver):
             "take_profit": 160.00,
             "comment": "My strategy signal"
         }
-        
+
         Args:
-            raw_data: Raw webhook data from TradingView
-            
+            raw_data: Raw webhook data from TradingView.
+
         Returns:
-            TradingSignal or None if parsing failed
+            TradingSignal or None if parsing failed.
         """
         try:
             # Validate required fields
             if "symbol" not in raw_data or "action" not in raw_data:
                 logger.warning("Missing required fields in TradingView signal")
                 return None
-            
-            symbol = raw_data["symbol"].upper()
-            action = raw_data["action"].lower()
-            
+
+            symbol = str(raw_data["symbol"]).upper()
+            action = str(raw_data["action"]).lower()
+
             # Map action to signal type
             if action in ["buy", "long"]:
                 signal_type = SignalType.BUY
@@ -97,82 +118,75 @@ class TradingViewSignalReceiver(SignalReceiver):
             elif action in ["close", "exit"]:
                 signal_type = SignalType.CLOSE
             else:
-                logger.warning(f"Unknown action in TradingView signal: {action}")
+                logger.warning("Unknown action in TradingView signal: %s", action)
                 return None
-            
-            # Parse optional fields
-            price = float(raw_data["price"]) if "price" in raw_data and raw_data["price"] is not None else None
-            strength = float(raw_data["strength"]) if "strength" in raw_data and raw_data["strength"] is not None else None
-            stop_loss = float(raw_data["stop_loss"]) if "stop_loss" in raw_data and raw_data["stop_loss"] is not None else None
-            take_profit = float(raw_data["take_profit"]) if "take_profit" in raw_data and raw_data["take_profit"] is not None else None
-            comment = str(raw_data["comment"]) if "comment" in raw_data and raw_data["comment"] is not None else None
-            
+
             # Parse timestamp
-            timestamp = None
-            if "time" in raw_data and raw_data["time"] is not None:
+            timestamp: datetime | None = None
+            raw_time = raw_data.get("time")
+            if raw_time is not None:
                 try:
-                    timestamp = datetime.fromisoformat(raw_data["time"].replace("Z", "+00:00"))
+                    timestamp = datetime.fromisoformat(str(raw_time).replace("Z", "+00:00"))
                 except ValueError:
-                    logger.warning(f"Could not parse timestamp: {raw_data['time']}")
+                    logger.warning("Could not parse timestamp: %s", raw_time)
                     timestamp = datetime.now()
             else:
                 timestamp = datetime.now()
-            
+
             return TradingSignal(
                 symbol=symbol,
                 signal_type=signal_type,
-                price=price,
+                price=_opt_float(raw_data, "price"),
                 timestamp=timestamp,
-                strength=strength,
-                stop_loss=stop_loss,
-                take_profit=take_profit,
-                comment=comment,
-                raw_data=raw_data
+                strength=_opt_float(raw_data, "strength"),
+                stop_loss=_opt_float(raw_data, "stop_loss"),
+                take_profit=_opt_float(raw_data, "take_profit"),
+                comment=_opt_str(raw_data, "comment"),
+                raw_data=raw_data,
             )
-            
-        except Exception as e:
-            logger.error(f"Error parsing TradingView signal: {e}")
+
+        except Exception as exc:
+            logger.error("Error parsing TradingView signal: %s", exc)
             return None
 
 
 # Simple HTTP server for receiving webhooks (optional)
-def create_webhook_app(receiver: SignalReceiver, host: str = "0.0.0.0", port: int = 5000):
+def create_webhook_app(receiver: SignalReceiver, host: str = "0.0.0.0", port: int = 5000) -> Any:
     """Create a simple Flask app for receiving webhook signals.
-    
+
     Args:
-        receiver: SignalReceiver instance to use for parsing
-        host: Host to bind to
-        port: Port to bind to
-        
+        receiver: SignalReceiver instance to use for parsing.
+        host: Host to bind to (used by callers running the app).
+        port: Port to bind to (used by callers running the app).
+
     Returns:
-        Flask app instance
+        Flask app instance, or None when Flask is not installed.
     """
     try:
-        from flask import Flask, request, jsonify
-        
+        from flask import Flask, jsonify, request
+
         app = Flask(__name__)
-        
-        @app.route('/webhook', methods=['POST'])
-        def webhook():
+
+        @app.route("/webhook", methods=["POST"])
+        def webhook() -> Any:
             if not request.is_json:
                 return jsonify({"error": "Expected JSON"}), 400
-            
+
             data = request.get_json()
             signal = receiver.parse_signal(data)
-            
+
             if signal is None:
                 return jsonify({"error": "Failed to parse signal"}), 400
-            
-            # In a real implementation, this would queue the signal for processing
-            logger.info(f"Received signal: {signal}")
+
+            logger.info("Received signal: %s", signal)
             return jsonify({"status": "received", "signal": signal.__dict__}), 200
-        
-        @app.route('/health', methods=['GET'])
-        def health():
+
+        @app.route("/health", methods=["GET"])
+        def health() -> Any:
             return jsonify({"status": "healthy"}), 200
-        
+
         return app
-        
+
     except ImportError:
         logger.warning("Flask not installed. Webhook server not available.")
         return None
