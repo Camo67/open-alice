@@ -6,7 +6,7 @@ import argparse
 
 from open_alice.data import add_returns, fetch_ohlcv
 from open_alice.engine import run_backtest, run_paper
-from open_alice.strategies import BollingerStrategy, MacdStrategy, RsiStrategy, SmaCrossover
+from open_alice.strategies import BollingerStrategy, MacdStrategy, RsiStrategy, SmaCrossover, Strategy
 
 STRATEGIES = {
     "sma_crossover": SmaCrossover,
@@ -48,7 +48,7 @@ def main() -> None:
         _run_paper(args)
 
 
-def _build_strategy(name: str, args: argparse.Namespace) -> object:
+def _build_strategy(name: str, args: argparse.Namespace) -> Strategy:
     if name == "sma_crossover":
         return SmaCrossover(fast=args.fast, slow=args.slow)
     return STRATEGIES[name]()

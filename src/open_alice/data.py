@@ -22,15 +22,16 @@ def fetch_ohlcv(
         DataFrame with columns: Open, High, Low, Close, Volume.
     """
     ticker = yf.Ticker(symbol)
-    df = ticker.history(period=period, interval=interval, auto_adjust=True)
-    if df.empty:
+    raw = ticker.history(period=period, interval=interval, auto_adjust=True)
+    if raw.empty:
         raise ValueError(f"No data returned for symbol: {symbol}")
+    df = pd.DataFrame(raw)
     df.index = pd.DatetimeIndex(df.index).tz_localize(None)
     return df
 
 
 def add_returns(df: pd.DataFrame) -> pd.DataFrame:
     """Add a simple daily returns column."""
-    df = df.copy()
-    df["Return"] = df["Close"].pct_change()
-    return df
+    result = df.copy()
+    result["Return"] = result["Close"].pct_change()
+    return result

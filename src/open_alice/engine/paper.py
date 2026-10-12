@@ -7,6 +7,8 @@ from datetime import datetime
 
 import pandas as pd
 
+from open_alice.strategies.base import Strategy
+
 
 @dataclass
 class PaperPosition:
@@ -20,7 +22,7 @@ class PaperPosition:
 class PaperPortfolio:
     cash: float
     positions: dict[str, PaperPosition] = field(default_factory=dict)
-    trades: list[dict] = field(default_factory=list)
+    trades: list[dict[str, object]] = field(default_factory=list)
 
     @property
     def equity(self) -> float:
@@ -62,7 +64,7 @@ class PaperPortfolio:
 
 def run_paper(
     df: pd.DataFrame,
-    strategy: object,
+    strategy: Strategy,
     symbol: str,
     initial_capital: float = 100_000.0,
     risk_per_trade: float = 0.02,
