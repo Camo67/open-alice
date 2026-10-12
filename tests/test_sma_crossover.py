@@ -8,8 +8,9 @@ from open_alice.strategies.sma_crossover import SmaCrossover
 
 @pytest.fixture
 def sample_data() -> pd.DataFrame:
+    # Create data with a clear uptrend: first 50 days at 100, next 50 days at 200
     dates = pd.date_range("2024-01-01", periods=100, freq="D")
-    prices = pd.Series(range(100, 200), dtype=float)
+    prices = pd.Series([100.0] * 50 + [200.0] * 50, index=dates)
     return pd.DataFrame({"Close": prices}, index=dates)
 
 
@@ -30,7 +31,8 @@ def test_invalid_periods() -> None:
 def test_uptrend_generates_buy_signal(sample_data: pd.DataFrame) -> None:
     strat = SmaCrossover(fast=5, slow=10)
     result = strat.generate_signals(sample_data)
-    # In a strong uptrend, we should not have a sell signal at the end
-    assert result["Signal"].iloc[-1] != -1
-    # And we should have generated at least one buy signal
+    
+    # After the trend is established, we should have a buy signal
     assert (result["Signal"] == 1).any()
+    # We should never have a sell signal in this scenario
+    assert (result["Signal"] == -1).sum() == 0
