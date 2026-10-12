@@ -20,9 +20,15 @@ dev = [
     "mypy>=1.8",
     "pandas-stubs>=2.0",
 ]
+web = [
+    "flask>=2.0",
+]
+mt5 = [
+    "MetaTrader5>=5.0.45; sys_platform == 'win32'",
+]
 
 [[tool.mypy.overrides]]
-module = ["yfinance.*"]
+module = ["yfinance.*", "MetaTrader5", "flask.*"]
 ignore_missing_imports = true
 
 [tool.ruff]
