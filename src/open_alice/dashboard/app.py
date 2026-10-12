@@ -292,10 +292,7 @@ def create_dashboard_app() -> Any:
         if strategy not in ("sma_crossover", "rsi", "macd", "bollinger"):
             return jsonify({"error": f"unknown strategy: {strategy}"}), 400
         try:
-            if source == "mt5":
-                df = _mt5_frame(symbol)
-            else:
-                df = fetch_ohlcv(symbol, period=period)
+            df = _mt5_frame(symbol) if source == "mt5" else fetch_ohlcv(symbol, period=period)
             df = add_returns(df)
             return jsonify(chart_payload(df, strategy))
         except Exception as exc:
