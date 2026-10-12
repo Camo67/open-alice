@@ -21,7 +21,7 @@ def sample_ohlcv() -> pd.DataFrame:
 def test_paper_portfolio_buy_sell() -> None:
     portfolio = PaperPortfolio(cash=100_000)
     portfolio.buy("TEST", 100.0, 10)
-    assert portfolio.cash == 90_000
+    assert portfolio.cash == 99_000
     assert "TEST" in portfolio.positions
 
     portfolio.sell("TEST", 110.0)
