@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import sys
 
 from open_alice.data import add_returns, fetch_ohlcv
 from open_alice.engine import run_backtest, run_paper
@@ -87,7 +86,10 @@ def _run_paper(args: argparse.Namespace) -> None:
     df = add_returns(df)
 
     strategy = _build_strategy(args.strategy, args)
-    portfolio = run_paper(df, strategy, initial_capital=args.capital, risk_per_trade=args.risk)
+    portfolio = run_paper(
+        df, strategy, args.symbol,
+        initial_capital=args.capital, risk_per_trade=args.risk,
+    )
 
     print(f"  Final Equity:    ${portfolio.equity:>10,.2f}")
     print(f"  Cash Remaining:  ${portfolio.cash:>10,.2f}")

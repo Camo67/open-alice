@@ -38,6 +38,6 @@ def test_paper_portfolio_insufficient_funds() -> None:
 
 def test_run_paper(sample_ohlcv: pd.DataFrame) -> None:
     strategy = SmaCrossover(fast=5, slow=10)
-    portfolio = run_paper(sample_ohlcv, strategy, initial_capital=100_000)
+    portfolio = run_paper(sample_ohlcv, strategy, "AAPL", initial_capital=100_000)
     assert portfolio.equity > 0
     assert isinstance(portfolio.trades, list)

@@ -63,6 +63,7 @@ class PaperPortfolio:
 def run_paper(
     df: pd.DataFrame,
     strategy: object,
+    symbol: str,
     initial_capital: float = 100_000.0,
     risk_per_trade: float = 0.02,
 ) -> PaperPortfolio:
