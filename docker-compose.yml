@@ -1,0 +1,10 @@
+services:
+  alice:
+    build: .
+    volumes:
+      - ./data:/app/data
+    command: ["backtest", "--symbol", "AAPL", "--period", "1y"]
+
+  test:
+    build: .
+    command: ["pytest", "tests/", "-v", "--tb=short"]
