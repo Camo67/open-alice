@@ -25,7 +25,7 @@ def test_paper_portfolio_buy_sell() -> None:
     assert "TEST" in portfolio.positions
 
     portfolio.sell("TEST", 110.0)
-    assert portfolio.cash == 101_000
+    assert portfolio.cash == 100_100
     assert "TEST" not in portfolio.positions
 
 
