@@ -94,6 +94,11 @@ def main() -> None:
     webhook.add_argument("--port", type=int, default=5000, help="Port to bind to")
     webhook.add_argument("--secret", type=str, help="Secret for request validation")
 
+    # Dashboard command
+    dash = subparsers.add_parser("dashboard", help="Start the web dashboard")
+    dash.add_argument("--host", default="127.0.0.1", help="Host to bind to")
+    dash.add_argument("--port", type=int, default=8080, help="Port to bind to")
+
     args = parser.parse_args()
 
     if args.command == "backtest":
@@ -106,6 +111,8 @@ def main() -> None:
         _run_broker(args)
     elif args.command == "serve":
         _run_webhook(args)
+    elif args.command == "dashboard":
+        _run_dashboard(args)
 
 
 def _build_strategy(name: str, args: argparse.Namespace) -> Strategy:
@@ -493,6 +500,25 @@ def _run_webhook(args: argparse.Namespace) -> None:
         app.run(host=args.host, port=args.port, debug=True)
     except KeyboardInterrupt:
         print("\nShutting down webhook server...")
+
+
+def _run_dashboard(args: argparse.Namespace) -> None:
+    print(f"\n{'='*60}")
+    print("  Alice Dashboard")
+    print(f"  Open: http://{args.host}:{args.port}")
+    print(f"{'='*60}\n")
+
+    try:
+        from open_alice.dashboard.app import create_dashboard_app
+    except RuntimeError as exc:
+        print(f"Error: {exc}")
+        sys.exit(1)
+
+    app = create_dashboard_app()
+    try:
+        app.run(host=args.host, port=args.port, debug=False)
+    except KeyboardInterrupt:
+        print("\nShutting down dashboard...")
 
 
 if __name__ == "__main__":
