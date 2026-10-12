@@ -19,10 +19,20 @@ class PaperPosition:
 
 
 @dataclass
+class Trade:
+    time: datetime
+    action: str
+    symbol: str
+    shares: int
+    price: float
+    pnl: float | None = None
+
+
+@dataclass
 class PaperPortfolio:
     cash: float
     positions: dict[str, PaperPosition] = field(default_factory=dict)
-    trades: list[dict[str, object]] = field(default_factory=list)
+    trades: list[Trade] = field(default_factory=list)
 
     @property
     def equity(self) -> float:
@@ -31,19 +41,19 @@ class PaperPortfolio:
             total += pos.shares * pos.entry_price
         return total
 
-    def buy(self, symbol: str, price: int, shares: int) -> None:
+    def buy(self, symbol: str, price: float, shares: int) -> None:
         cost = shares * price
         if cost > self.cash:
             return
         self.cash -= cost
         self.positions[symbol] = PaperPosition(symbol, shares, price, datetime.now())
-        self.trades.append({
-            "time": datetime.now(),
-            "action": "BUY",
-            "symbol": symbol,
-            "shares": shares,
-            "price": price,
-        })
+        self.trades.append(Trade(
+            time=datetime.now(),
+            action="BUY",
+            symbol=symbol,
+            shares=shares,
+            price=price,
+        ))
 
     def sell(self, symbol: str, price: float) -> None:
         if symbol not in self.positions:
@@ -52,14 +62,14 @@ class PaperPortfolio:
         proceeds = pos.shares * price
         self.cash += proceeds
         pnl = proceeds - (pos.shares * pos.entry_price)
-        self.trades.append({
-            "time": datetime.now(),
-            "action": "SELL",
-            "symbol": symbol,
-            "shares": pos.shares,
-            "price": price,
-            "pnl": pnl,
-        })
+        self.trades.append(Trade(
+            time=datetime.now(),
+            action="SELL",
+            symbol=symbol,
+            shares=pos.shares,
+            price=price,
+            pnl=pnl,
+        ))
 
 
 def run_paper(
@@ -73,7 +83,8 @@ def run_paper(
 
     Args:
         df: OHLCV DataFrame.
-        strategy: Strategy with generate_signals method.
+        strategy: Strategy implementing the Strategy protocol.
+        symbol: Trading symbol.
         initial_capital: Starting cash.
         risk_per_trade: Fraction of equity risked per trade.
 
@@ -88,22 +99,19 @@ def run_paper(
         prev = signals.iloc[i - 1]
 
         if row["Signal"] == 1 and prev["Signal"] != 1:
-            # Buy signal
             risk_amount = portfolio.equity * risk_per_trade
             stop_distance = row["Close"] * 0.05
             if stop_distance > 0:
                 shares = int(risk_amount / stop_distance)
                 if shares > 0:
-                    portfolio.buy(symbol, row["Close"], shares)
+                    portfolio.buy(symbol, float(row["Close"]), shares)
 
         elif row["Signal"] == -1 and prev["Signal"] != -1:
-            # Sell signal
-            for symbol in list(portfolio.positions.keys()):
-                portfolio.sell(symbol, row["Close"])
+            for sym in list(portfolio.positions.keys()):
+                portfolio.sell(sym, float(row["Close"]))
 
-    # Close all positions at the end
-    final_price = signals["Close"].iloc[-1]
-    for symbol in list(portfolio.positions.keys()):
-        portfolio.sell(symbol, final_price)
+    final_price = float(signals["Close"].iloc[-1])
+    for sym in list(portfolio.positions.keys()):
+        portfolio.sell(sym, final_price)
 
     return portfolio
