@@ -6,7 +6,13 @@ import argparse
 
 from open_alice.data import add_returns, fetch_ohlcv
 from open_alice.engine import run_backtest, run_paper
-from open_alice.strategies import BollingerStrategy, MacdStrategy, RsiStrategy, SmaCrossover, Strategy
+from open_alice.strategies import (
+    BollingerStrategy,
+    MacdStrategy,
+    RsiStrategy,
+    SmaCrossover,
+    Strategy,
+)
 
 STRATEGIES = {
     "sma_crossover": SmaCrossover,
