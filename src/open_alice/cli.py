@@ -73,6 +73,7 @@ def main() -> None:
     live.add_argument("--risk", type=float, default=0.02, help="Risk per trade")
     live.add_argument("--interval", type=int, default=60, help="Check interval (seconds)")
     live.add_argument("--execute", action="store_true", help="Actually place orders")
+    live.add_argument("--yes", action="store_true", help="Skip the live-orders confirmation")
 
     # Broker account management (Headway via MT5)
     broker = subparsers.add_parser("broker", help="Manage MT5 / Headway login")
@@ -378,6 +379,13 @@ def _run_live(args: argparse.Namespace) -> None:
         sys.exit(1)
 
     execute = bool(getattr(args, "execute", False))
+    if execute and not bool(getattr(args, "yes", False)):
+        print("  WARNING: --execute places REAL orders on your Headway account.")
+        confirm = input("  Type YES to continue with live orders: ").strip()
+        if confirm != "YES":
+            print("  Aborted. Re-run without --execute for a dry run.")
+            broker.disconnect()
+            return
     try:
         strategy = _build_strategy(args.strategy, args)
 
