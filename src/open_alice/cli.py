@@ -97,10 +97,14 @@ def _run_paper(args: argparse.Namespace) -> None:
         total_pnl = sum(t.get("pnl", 0) for t in portfolio.trades)
         print(f"  Total P&L:       ${total_pnl:>10,.2f}")
 
-    print(f"\n  --- Trade Log ---")
+    print("\n  --- Trade Log ---")
     for t in portfolio.trades[:20]:
         pnl_str = f"  P&L: ${t['pnl']:,.2f}" if "pnl" in t else ""
-        print(f"  {t['time'].strftime('%Y-%m-%d %H:%M')} | {t['action']:>4} | {t.get('symbol', ''):>6} | {t.get('shares', 0):>6} @ ${t.get('price', 0):>8.2f}{pnl_str}")
+        print(
+            f"  {t['time'].strftime('%Y-%m-%d %H:%M')} | {t['action']:>4} | "
+            f"{t.get('symbol', ''):>6} | {t.get('shares', 0):>6} @ "
+            f"${t.get('price', 0):>8.2f}{pnl_str}"
+        )
 
     if len(portfolio.trades) > 20:
         print(f"  ... and {len(portfolio.trades) - 20} more trades")
