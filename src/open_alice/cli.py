@@ -49,7 +49,7 @@ def main() -> None:
         _run_paper(args)
 
 
-def _build_strategy(name: str, args: argparse.Namespace):
+def _build_strategy(name: str, args: argparse.Namespace) -> object:
     if name == "sma_crossover":
         return SmaCrossover(fast=args.fast, slow=args.slow)
     return STRATEGIES[name]()
@@ -113,4 +113,4 @@ def _run_paper(args: argparse.Namespace) -> None:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

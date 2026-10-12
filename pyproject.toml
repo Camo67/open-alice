@@ -18,7 +18,12 @@ dev = [
     "pytest>=8.0",
     "ruff>=0.1.0",
     "mypy>=1.8",
+    "pandas-stubs>=2.0",
 ]
+
+[[tool.mypy.overrides]]
+module = ["yfinance.*"]
+ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 100

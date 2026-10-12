@@ -62,7 +62,7 @@ class PaperPortfolio:
 
 def run_paper(
     df: pd.DataFrame,
-    strategy,
+    strategy: object,
     initial_capital: float = 100_000.0,
     risk_per_trade: float = 0.02,
 ) -> PaperPortfolio:
@@ -91,7 +91,7 @@ def run_paper(
             if stop_distance > 0:
                 shares = int(risk_amount / stop_distance)
                 if shares > 0:
-                    portfolio.buy(row["Close"], shares)
+                    portfolio.buy(symbol, row["Close"], shares)
 
         elif row["Signal"] == -1 and prev["Signal"] != -1:
             # Sell signal
