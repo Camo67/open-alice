@@ -46,7 +46,8 @@ def clean_ohlcv(df: pd.DataFrame) -> pd.DataFrame:
         return df
     values = df[cols].to_numpy(dtype=float, na_value=np.nan)
     finite_mask = np.isfinite(values).all(axis=1)
-    return df[finite_mask]
+    result: pd.DataFrame = df[finite_mask]
+    return result
 
 
 def add_returns(df: pd.DataFrame) -> pd.DataFrame:
