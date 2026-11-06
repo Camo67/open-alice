@@ -44,3 +44,9 @@ select = ["E", "F", "I", "N", "UP", "B", "SIM"]
 [tool.mypy]
 python_version = "3.11"
 strict = true
+
+# Flask is an optional [web] dependency: the route decorators in these modules
+# carry untyped-decorator ignores that are used only when flask is absent.
+[[tool.mypy.overrides]]
+module = ["open_alice.dashboard.app", "open_alice.signals.webhook"]
+warn_unused_ignores = false
