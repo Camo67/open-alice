@@ -24,7 +24,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          pip install -e ".[dev,web]"
 
       - name: Lint with ruff
         run: ruff check src tests
@@ -41,3 +41,31 @@ jobs:
         with:
           name: coverage-report
           path: htmlcov/
+
+  demo-container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build existing CLI/test image
+        run: docker build -t alice-cli .
+      - name: Test existing image (override alice entrypoint)
+        run: docker run --rm --entrypoint pytest alice-cli tests/ -q
+      - name: Build broker-free demo image
+        run: docker build -f Dockerfile.demo -t alice-demo .
+      - name: Start and smoke-test demo container
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --name alice-demo -p 127.0.0.1:8080:8080 alice-demo
+          trap 'docker logs alice-demo; docker rm -f alice-demo' EXIT
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:8080/ > /tmp/dashboard.html; then break; fi
+            sleep 1
+          done
+          grep -q 'Alice Trading Dashboard' /tmp/dashboard.html
+          curl -fsS http://127.0.0.1:8080/api/account | python -c 'import json,sys; d=json.load(sys.stdin); assert d["connected"] is False and "no saved login" in d["error"]'
+          status=$(curl -sS -o /tmp/live.json -w '%{http_code}' -H 'Content-Type: application/json' -d '{"symbol":"EURUSD","side":"buy","volume":0.01,"live":true}' http://127.0.0.1:8080/api/order)
+          test "$status" = 403
+          python -c 'import json; d=json.load(open("/tmp/live.json")); assert d["ok"] is False and "Demo mode" in d["message"]'
+          curl -fsS -H 'Content-Type: application/json' -d '{"symbol":"EURUSD","side":"buy","volume":0.01,"live":false}' http://127.0.0.1:8080/api/order | python -c 'import json,sys; d=json.load(sys.stdin); assert d["ok"] is True and "DRY RUN" in d["message"]'
+          docker exec alice-demo python -c 'import os; from open_alice.broker import load_credentials; assert os.getenv("ALICE_DEMO") == "1"; assert os.geteuid() != 0; assert load_credentials() is None'

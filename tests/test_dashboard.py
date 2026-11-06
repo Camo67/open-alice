@@ -48,3 +48,41 @@ def test_chart_payload_all_strategies(sample_ohlcv: pd.DataFrame) -> None:
 def test_chart_payload_downsamples(sample_ohlcv: pd.DataFrame) -> None:
     payload = chart_payload(sample_ohlcv, "rsi", max_points=20)
     assert len(payload["labels"]) <= 20
+
+
+def test_demo_mode_blocks_live_order() -> None:
+    import os
+
+    os.environ["ALICE_DEMO"] = "1"
+    try:
+        from open_alice.dashboard.app import create_dashboard_app
+
+        app = create_dashboard_app()
+        client = app.test_client()
+        resp = client.post(
+            "/api/order",
+            json={"symbol": "EURUSD", "side": "buy", "volume": 0.01, "live": True},
+        )
+        assert resp.status_code == 403
+        assert "Demo mode" in resp.get_json()["message"]
+    finally:
+        del os.environ["ALICE_DEMO"]
+
+
+def test_dry_run_order_still_works_in_demo_mode() -> None:
+    import os
+
+    os.environ["ALICE_DEMO"] = "1"
+    try:
+        from open_alice.dashboard.app import create_dashboard_app
+
+        app = create_dashboard_app()
+        client = app.test_client()
+        resp = client.post(
+            "/api/order",
+            json={"symbol": "EURUSD", "side": "buy", "volume": 0.01},
+        )
+        assert resp.status_code == 200
+        assert "DRY RUN" in resp.get_json()["message"]
+    finally:
+        del os.environ["ALICE_DEMO"]

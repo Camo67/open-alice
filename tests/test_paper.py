@@ -41,3 +41,29 @@ def test_run_paper(sample_ohlcv: pd.DataFrame) -> None:
     portfolio = run_paper(sample_ohlcv, strategy, "AAPL", initial_capital=100_000)
     assert portfolio.equity > 0
     assert isinstance(portfolio.trades, list)
+
+
+def _nan_injected_ohlcv() -> pd.DataFrame:
+    """100-bar series with NaN closes mid-series and on the final bar."""
+    dates = pd.date_range("2024-01-01", periods=100, freq="D")
+    prices = pd.Series(range(100, 200), dtype=float)
+    prices.iloc[50] = float("nan")
+    prices.iloc[99] = float("nan")
+    returns = prices.pct_change()
+    return pd.DataFrame(
+        {"Close": prices, "Return": returns, "Signal": 1, "Position": 1},
+        index=dates,
+    )
+
+
+def test_run_paper_never_trades_at_nan() -> None:
+    import math
+
+    strategy = SmaCrossover(fast=5, slow=10)
+    portfolio = run_paper(_nan_injected_ohlcv(), strategy, "AAPL")
+    for trade in portfolio.trades:
+        assert math.isfinite(trade.price), f"trade at non-finite price: {trade}"
+        assert trade.price > 0
+        if trade.pnl is not None:
+            assert math.isfinite(trade.pnl), f"non-finite pnl: {trade}"
+    assert math.isfinite(portfolio.equity)

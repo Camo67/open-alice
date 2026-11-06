@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 import yfinance as yf
 
@@ -27,7 +28,26 @@ def fetch_ohlcv(
         raise ValueError(f"No data returned for symbol: {symbol}")
     df = pd.DataFrame(raw)
     df.index = pd.DatetimeIndex(df.index).tz_localize(None)
+    df = clean_ohlcv(df)
+    if df.empty:
+        raise ValueError(f"No valid price rows for symbol: {symbol}")
     return df
+
+
+def clean_ohlcv(df: pd.DataFrame) -> pd.DataFrame:
+    """Drop rows with missing or non-finite OHLC values.
+
+    Providers sometimes return bars with no valid price (for example an
+    incomplete current session). Those rows must never reach the engines,
+    or trades get recorded at NaN prices.
+    """
+    cols = [c for c in ("Open", "High", "Low", "Close") if c in df.columns]
+    if not cols:
+        return df
+    values = df[cols].to_numpy(dtype=float, na_value=np.nan)
+    finite_mask = np.isfinite(values).all(axis=1)
+    result: pd.DataFrame = df[finite_mask]
+    return result
 
 
 def add_returns(df: pd.DataFrame) -> pd.DataFrame:

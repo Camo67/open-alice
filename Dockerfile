@@ -6,7 +6,7 @@ COPY pyproject.toml requirements.txt README.md ./
 COPY src/ ./src/
 COPY tests/ ./tests/
 
-RUN pip install --no-cache-dir -e ".[dev]"]
+RUN pip install --no-cache-dir -e ".[dev,web]"
 
 ENTRYPOINT ["alice"]
 CMD ["--help"]

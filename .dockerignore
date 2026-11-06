@@ -12,3 +12,12 @@ venv
 *.egg-info
 dist
 build
+
+# Never include credentials, local data or secrets in either build context.
+.env.*
+!.env.example
+data
+.alice
+*credentials*.json
+*.pem
+*.key

@@ -323,6 +323,15 @@ def create_dashboard_app() -> Any:
                     f"(SL={sl} TP={tp}). Tick LIVE to send.",
                 }
             )
+        import os
+
+        if os.environ.get("ALICE_DEMO") == "1":
+            return jsonify(
+                {
+                    "ok": False,
+                    "message": "Demo mode: live orders are disabled on this deployment.",
+                }
+            ), 403
         saved = load_credentials()
         if saved is None:
             return jsonify({"ok": False, "message": "no saved MT5 login"}), 400

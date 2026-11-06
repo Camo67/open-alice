@@ -85,6 +85,7 @@ class MT5Broker:
         self.terminal_path = terminal_path
         self.connected = False
         self.account_info: MT5AccountInfo | None = None
+        self._demo_identity: tuple[int, str] | None = None
 
     def connect(self) -> bool:
         """Initialize connection to the MT5 terminal.
@@ -108,7 +109,12 @@ class MT5Broker:
             return False
 
         self.connected = True
-        self.account_info = self._get_account_info()
+        try:
+            self._assert_demo_account(pin=True)
+            self.account_info = self._get_account_info()
+        except Exception:
+            self.disconnect()
+            raise
         print(f"Connected to MT5 account #{self.account_info.login}")
         return True
 
@@ -119,12 +125,46 @@ class MT5Broker:
         mt5 = _load_mt5()
         mt5.shutdown()
         self.connected = False
+        self._demo_identity = None
+        self.account_info = None
         print("Disconnected from MT5")
 
     def _require_connected(self) -> Any:
         if not self.connected:
             raise ConnectionError("Not connected to MT5. Call connect() first.")
         return _load_mt5()
+
+    def _assert_demo_account(self, *, pin: bool = False) -> None:
+        """Fail closed on real/unknown accounts and terminal account switches.
+
+        This build supports demo accounts only. Server names and CLI flags are
+        not evidence of account type. Re-read immediately before every send.
+        """
+        mt5 = self._require_connected()
+        info = mt5.account_info()
+        mode = getattr(info, "trade_mode", None)
+        demo_mode = getattr(mt5, "ACCOUNT_TRADE_MODE_DEMO", None)
+        login = getattr(info, "login", None)
+        server = getattr(info, "server", None)
+        if (
+            type(mode) is not int
+            or type(demo_mode) is not int
+            or mode != demo_mode
+            or type(login) is not int
+            or login <= 0
+            or not isinstance(server, str)
+            or not server
+        ):
+            raise RuntimeError("Demo-only safety: account type or identity is not verified demo")
+        identity = (login, server)
+        if self.login is not None and login != self.login:
+            raise RuntimeError("Demo-only safety: login does not match requested account")
+        if self.server is not None and server != self.server:
+            raise RuntimeError("Demo-only safety: server does not match requested account")
+        if pin:
+            self._demo_identity = identity
+        elif self._demo_identity is None or identity != self._demo_identity:
+            raise RuntimeError("Demo-only safety: terminal account changed; reconnect required")
 
     def _get_account_info(self) -> MT5AccountInfo:
         """Fetch account information from MT5."""
@@ -258,6 +298,7 @@ class MT5Broker:
             "type_time": mt5.ORDER_TIME_GTC,
             "type_filling": symbol_info.get("filling_mode", mt5.ORDER_FILLING_IOC),
         }
+        self._assert_demo_account()
         result = mt5.order_send(request)
         if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
             code = result.retcode if result is not None else mt5.last_error()
@@ -329,6 +370,7 @@ class MT5Broker:
             "type_time": mt5.ORDER_TIME_GTC,
             "type_filling": mt5.ORDER_FILLING_IOC,
         }
+        self._assert_demo_account()
         result = mt5.order_send(request)
         if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
             code = result.retcode if result is not None else mt5.last_error()
