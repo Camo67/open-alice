@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -98,20 +99,30 @@ def run_paper(
         row = signals.iloc[i]
         prev = signals.iloc[i - 1]
 
+        price = float(row["Close"])
+        if not math.isfinite(price) or price <= 0:
+            continue
+
         if row["Signal"] == 1 and prev["Signal"] != 1:
             risk_amount = portfolio.equity * risk_per_trade
-            stop_distance = row["Close"] * 0.05
+            stop_distance = price * 0.05
             if stop_distance > 0:
                 shares = int(risk_amount / stop_distance)
                 if shares > 0:
-                    portfolio.buy(symbol, float(row["Close"]), shares)
+                    portfolio.buy(symbol, price, shares)
 
         elif row["Signal"] == -1 and prev["Signal"] != -1:
             for sym in list(portfolio.positions.keys()):
-                portfolio.sell(sym, float(row["Close"]))
+                portfolio.sell(sym, price)
 
-    final_price = float(signals["Close"].iloc[-1])
-    for sym in list(portfolio.positions.keys()):
-        portfolio.sell(sym, final_price)
+    valid_closes = [
+        float(p)
+        for p in signals["Close"]
+        if math.isfinite(float(p)) and float(p) > 0
+    ]
+    if valid_closes:
+        final_price = valid_closes[-1]
+        for sym in list(portfolio.positions.keys()):
+            portfolio.sell(sym, final_price)
 
     return portfolio
